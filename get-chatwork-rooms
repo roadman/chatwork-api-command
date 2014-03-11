@@ -1,0 +1,42 @@
+#!/bin/bash
+
+CUR_DIR=`pwd`
+
+ENDPOINT="https://api.chatwork.com/v1"
+
+usage() {
+    echo "Usage: $0 [ -h ] [ -c chatwork-api-token ]"
+}
+
+while getopts hc: OPT
+do
+    case $OPT in
+        h)  usage
+            exit
+            ;;
+        c)
+            API_CODE="$OPTARG"
+            ;;
+        \?) usage
+            exit
+            ;;
+    esac
+done
+
+shift $((OPTIND - 1))
+
+CURL_HD=""
+
+CURL_API_CODE="-H \"X-ChatWorkToken: $API_CODE\""
+
+RUN_COMMAND="\
+curl -i \
+ $CURL_HD \
+ $CURL_API_CODE \
+ $ENDPOINT/rooms"
+
+echo $RUN_COMMAND
+
+eval $RUN_COMMAND
+
+
