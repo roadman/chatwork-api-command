@@ -7,11 +7,13 @@ SAVE_API_CODE=$HOME/.chatwork
 SAVE_ROOM_ID=$HOME/.chatwork.room
 
 usage() {
-    echo "Usage: $0 [ -h ] [ -c api token ] [-r room_id] {get-rooms|get-me|get-my-status|post-mes} params..."
-    echo "   when post-mes params : message"
+    echo "Usage: $0 [ -h ] [ -i ] [ -s ] [ -c api token ] [-r room_id] {get-rooms|get-me|get-my-status|post-mes} params..."
+    echo "   -s : silent mode"
+    echo "   -i : interactive mode ( when \"post-mes\" )"
+    echo "   params (when \"post-mes\") : message"
 }
 
-while getopts hc:r:o OPT
+while getopts hc:r:ois OPT
 do
     case $OPT in
         h)  usage
@@ -25,6 +27,12 @@ do
             ;;
         o)
             IS_ONESHOT="1"
+            ;;
+        i)
+          IS_INTERACTIVE_MODE="1" # Interactive mode ( when post-mes )
+            ;;
+        s)
+          IS_SILENT_MODE="1"
             ;;
         \?) usage
             exit 1
@@ -49,6 +57,7 @@ if [ "$1" = "" ]; then
 fi
 
 CW_API_CMD="$1"
+CW_PARAMS="$2"
 
 case $CW_API_CMD in
     get-me)
@@ -72,38 +81,54 @@ case $CW_API_CMD in
                 exit 1
             fi
         fi
-        if [ "$2" = "" -o "$ROOM_ID" = "" ];then
+        if [ "$ROOM_ID" = "" ];then
             usage
             exit 1
         fi
         API_METH="POST"
         API_PATH="rooms/$ROOM_ID/messages"
-        API_POST_MES=`echo $2 | ruby -r uri -ne 'print URI.escape $_'`
         ;;
     \?) usage
         exit 1
         ;;
 esac
 
-CURL_HD="-X $API_METH"
-if [ "$CW_API_CMD" = "post-mes" ];then
-    CURL_HD="$CURL_HD -d \"body=$API_POST_MES\""
-fi
+gen_curl_cmd() {
+    CURL_HD="-X $API_METH"
+    if [ "$CW_API_CMD" = "post-mes" ];then
+        API_POST_MES=`echo "$1" | ruby -r uri -ne 'print URI.escape $_'`
+        CURL_HD="$CURL_HD -d \"body=$API_POST_MES\""
+    fi
 
-CURL_API_CODE="-H \"X-ChatWorkToken: $API_CODE\""
+    CURL_API_CODE="-H \"X-ChatWorkToken: $API_CODE\""
 
-CURL_CMD="curl -s \
- $CURL_HD \
- $CURL_API_CODE \
- $ENDPOINT/$API_PATH"
+    CURL_CMD="curl -s \
+     $CURL_HD \
+     $CURL_API_CODE \
+     $ENDPOINT/$API_PATH"
 
-CURL_RES=`eval $CURL_CMD`
+    eval $CURL_CMD
+}
 
-type jq 2>&1 >/dev/null
-if [ $? -eq 0 ];then
-    echo $CURL_RES | jq "."
+if [ "$CW_API_CMD" = "post-mes" -a "$IS_INTERACTIVE_MODE" = "1" ];then
+    echo -n "$ROOM_ID > "
+    while read MES; do
+        if [ "$MES" = "" ];then
+            continue
+        fi
+        gen_curl_cmd "$MES" >/dev/null
+        echo -n "$ROOM_ID > "
+    done
 else
-    echo $CURL_RES
+    CURL_RES=`gen_curl_cmd $CW_PARAMS`
+    if [ "$IS_SILENT_MODE" != "1" ];then
+        type jq 2>&1 >/dev/null
+        if [ $? -eq 0 ];then
+            echo $CURL_RES | jq "."
+        else
+            echo $CURL_RES
+        fi
+    fi
 fi
 
 if [ "$IS_ONESHOT" != "1" ];then
