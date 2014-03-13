@@ -3,7 +3,7 @@
 CUR_DIR=`pwd`
 
 ENDPOINT="https://api.chatwork.com/v1"
-SAVE_API_TOKEN=$HOME/.chatwork
+SAVE_API_CODE=$HOME/.chatwork
 SAVE_ROOM_ID=$HOME/.chatwork.room
 
 usage() {
@@ -11,7 +11,7 @@ usage() {
     echo "   when post-mes params : message"
 }
 
-while getopts hc:r: OPT
+while getopts hc:r:o OPT
 do
     case $OPT in
         h)  usage
@@ -23,6 +23,9 @@ do
         r)
             ROOM_ID="$OPTARG"
             ;;
+        o)
+            IS_ONESHOT="1"
+            ;;
         \?) usage
             exit 1
             ;;
@@ -32,8 +35,8 @@ done
 shift $((OPTIND - 1))
 
 if [ "$API_CODE" = "" ];then
-    if [ -s $SAVE_API_TOKEN ];then
-        API_CODE=`cat $SAVE_API_TOKEN`
+    if [ -s $SAVE_API_CODE ];then
+        API_CODE=`cat $SAVE_API_CODE`
     else
         usage
         exit 1
@@ -103,8 +106,13 @@ else
     echo $CURL_RES
 fi
 
-if [ "$ROOM_ID" != "" ];then
-    echo "$ROOM_ID" > $SAVE_ROOM_ID
+if [ "$IS_ONESHOT" != "1" ];then
+    if [ "$API_CODE" != "" ];then
+        echo "$API_CODE" > $SAVE_API_CODE
+    fi
+    if [ "$ROOM_ID" != "" ];then
+        echo "$ROOM_ID" > $SAVE_ROOM_ID
+    fi
 fi
 
 exit 0
