@@ -59,51 +59,54 @@ fi
 CW_API_CMD="$1"
 CW_PARAMS="$2"
 
-case $CW_API_CMD in
-    get-me)
-        API_METH="GET"
-        API_PATH="me"
-        ;;
-    get-rooms)
-        API_METH="GET"
-        API_PATH="rooms"
-        ;;
-    get-my-status)
-        API_METH="GET"
-        API_PATH="my/status"
-        ;;
-    "post-mes"|"get-room")
-        if [ "$ROOM_ID" = "" ];then
-            if [ -s $SAVE_ROOM_ID ];then
-                ROOM_ID=`cat $SAVE_ROOM_ID`
-            else
+gen_curl_cmd() {
+    FUNC_PARAM1=$1
+    FUNC_PARAM2=$2
+
+    case $FUNC_PARAM1 in
+        get-me)
+            API_METH="GET"
+            API_PATH="me"
+            ;;
+        get-rooms)
+            API_METH="GET"
+            API_PATH="rooms"
+            ;;
+        get-my-status)
+            API_METH="GET"
+            API_PATH="my/status"
+            ;;
+        "post-mes"|"get-room")
+            if [ "$ROOM_ID" = "" ];then
+                if [ -s $SAVE_ROOM_ID ];then
+                    ROOM_ID=`cat $SAVE_ROOM_ID`
+                else
+                    usage
+                    exit 1
+                fi
+            fi
+            if [ "$ROOM_ID" = "" ];then
                 usage
                 exit 1
             fi
-        fi
-        if [ "$ROOM_ID" = "" ];then
-            usage
+
+            if [ "$FUNC_PARAM1" = "get-room" ];then
+                API_METH="GET"
+                API_PATH="rooms/$ROOM_ID"
+            elif [ "$FUNC_PARAM1" = "post-mes" ];then
+                API_METH="POST"
+                API_PATH="rooms/$ROOM_ID/messages"
+            fi
+
+            ;;
+        \?) usage
             exit 1
-        fi
+            ;;
+    esac
 
-        if [ "$CW_API_CMD" = "get-room" ];then
-            API_METH="GET"
-            API_PATH="rooms/$ROOM_ID"
-        elif [ "$CW_API_CMD" = "post-mes" ];then
-            API_METH="POST"
-            API_PATH="rooms/$ROOM_ID/messages"
-        fi
-
-        ;;
-    \?) usage
-        exit 1
-        ;;
-esac
-
-gen_curl_cmd() {
     CURL_HD="-X $API_METH"
-    if [ "$CW_API_CMD" = "post-mes" ];then
-        API_POST_MES=`echo "$1" | ruby -r uri -ne 'print URI.escape $_'`
+    if [ "$FUNC_PARAM1" = "post-mes" ];then
+        API_POST_MES=`echo "$FUNC_PARAM2" | ruby -r uri -ne 'print URI.escape $_'`
         CURL_HD="$CURL_HD -d \"body=$API_POST_MES\""
     fi
 
@@ -118,7 +121,14 @@ gen_curl_cmd() {
 }
 
 if [ "$CW_API_CMD" = "post-mes" -a "$IS_INTERACTIVE_MODE" = "1" ];then
-    echo -n "$ROOM_ID > "
+    CURL_RES=`gen_curl_cmd get-room $CW_PARAMS | jq ".name"`
+    if [ "$CURL_RES" = "" ];then
+        CW_PROMPT="$ROOM_ID"
+    else
+        CW_PROMPT="$CURL_RES"
+    fi
+
+    echo -n "$CW_PROMPT > "
     while read MES; do
         if [ "$MES" = "" ];then
             echo -n "quit? (enter quit)"
@@ -127,14 +137,14 @@ if [ "$CW_API_CMD" = "post-mes" -a "$IS_INTERACTIVE_MODE" = "1" ];then
                 echo "quit"
                 break
             fi
-            echo -n "$ROOM_ID > "
+            echo -n "$CW_PROMPT > "
             continue
         fi
-        gen_curl_cmd "$MES" >/dev/null
-        echo -n "$ROOM_ID > "
+        gen_curl_cmd $CW_API_CMD "$MES" >/dev/null
+        echo -n "$CW_PROMPT > "
     done
 else
-    CURL_RES=`gen_curl_cmd $CW_PARAMS`
+    CURL_RES=`gen_curl_cmd $CW_API_CMD $CW_PARAMS`
     if [ "$IS_SILENT_MODE" != "1" ];then
         type jq 2>&1 >/dev/null
         if [ $? -eq 0 ];then
