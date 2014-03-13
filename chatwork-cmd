@@ -114,6 +114,13 @@ if [ "$CW_API_CMD" = "post-mes" -a "$IS_INTERACTIVE_MODE" = "1" ];then
     echo -n "$ROOM_ID > "
     while read MES; do
         if [ "$MES" = "" ];then
+            echo -n "quit? (enter quit)"
+            read STOP_CHECK_INPUT
+            if [ "$STOP_CHECK_INPUT" = "" ];then
+                echo "quit"
+                break
+            fi
+            echo -n "$ROOM_ID > "
             continue
         fi
         gen_curl_cmd "$MES" >/dev/null
