@@ -37,6 +37,9 @@ do
         \?) usage
             exit 1
             ;;
+        *) usage
+            exit 1
+            ;;
     esac
 done
 
@@ -99,7 +102,7 @@ gen_curl_cmd() {
             fi
 
             ;;
-        \?) usage
+        *) usage
             exit 1
             ;;
     esac
@@ -121,7 +124,7 @@ gen_curl_cmd() {
 }
 
 if [ "$CW_API_CMD" = "post-mes" -a "$IS_INTERACTIVE_MODE" = "1" ];then
-    CURL_RES=`gen_curl_cmd get-room $CW_PARAMS | jq ".name"`
+    CURL_RES=`gen_curl_cmd get-room "$CW_PARAMS" | jq ".name"`
     if [ "$CURL_RES" = "" ];then
         CW_PROMPT="$ROOM_ID"
     else
@@ -130,21 +133,35 @@ if [ "$CW_API_CMD" = "post-mes" -a "$IS_INTERACTIVE_MODE" = "1" ];then
 
     echo -n "$CW_PROMPT > "
     while read MES; do
-        if [ "$MES" = "" ];then
-            echo -n "quit? (enter quit)"
-            read STOP_CHECK_INPUT
-            if [ "$STOP_CHECK_INPUT" = "" ];then
-                echo "quit"
-                break
-            fi
-            echo -n "$CW_PROMPT > "
-            continue
-        fi
+        case $MES in
+            "")
+                if [ "$MES" = "" ];then
+                    echo -n "quit? (enter quit)"
+                    read STOP_CHECK_INPUT
+                    if [ "$STOP_CHECK_INPUT" = "" ];then
+                        echo "quit"
+                        break
+                    fi
+                    echo -n "$CW_PROMPT > "
+                    continue
+                fi
+                ;;
+            \*)
+                echo -n "cmd? (enter quit)"
+                read STOP_CHECK_INPUT
+                if [ "$STOP_CHECK_INPUT" != "" ];then
+                    echo
+                fi
+                echo -n "$CW_PROMPT > "
+                continue
+                ;;
+        esac
+
         gen_curl_cmd $CW_API_CMD "$MES" >/dev/null
         echo -n "$CW_PROMPT > "
     done
 else
-    CURL_RES=`gen_curl_cmd $CW_API_CMD $CW_PARAMS`
+    CURL_RES=`gen_curl_cmd $CW_API_CMD "$CW_PARAMS"`
     if [ "$IS_SILENT_MODE" != "1" ];then
         type jq 2>&1 >/dev/null
         if [ $? -eq 0 ];then
