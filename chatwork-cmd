@@ -3,13 +3,15 @@
 CUR_DIR=`pwd`
 
 ENDPOINT="https://api.chatwork.com/v1"
+SAVE_API_TOKEN=$HOME/.chatwork
+SAVE_ROOM_ID=$HOME/.chatwork.room
 
 usage() {
-    echo "Usage: $0 [ -h ] [ -c api token ] {get-rooms|get-me|get-my-status|post-mes} params..."
-    echo "   when post-mes params : roomid message"
+    echo "Usage: $0 [ -h ] [ -c api token ] [-r room_id] {get-rooms|get-me|get-my-status|post-mes} params..."
+    echo "   when post-mes params : message"
 }
 
-while getopts hc: OPT
+while getopts hc:r: OPT
 do
     case $OPT in
         h)  usage
@@ -17,6 +19,9 @@ do
             ;;
         c)
             API_CODE="$OPTARG"
+            ;;
+        r)
+            ROOM_ID="$OPTARG"
             ;;
         \?) usage
             exit 1
@@ -27,8 +32,8 @@ done
 shift $((OPTIND - 1))
 
 if [ "$API_CODE" = "" ];then
-    if [ -s $HOME/.chatwork ];then
-        API_CODE=`cat $HOME/.chatwork`
+    if [ -s $SAVE_API_TOKEN ];then
+        API_CODE=`cat $SAVE_API_TOKEN`
     else
         usage
         exit 1
@@ -56,13 +61,21 @@ case $CW_API_CMD in
         API_PATH="my/status"
         ;;
     post-mes)
-        if [ "$2" = "" -o "$3" = "" ];then
+        if [ "$ROOM_ID" = "" ];then
+            if [ -s $SAVE_ROOM_ID ];then
+                ROOM_ID=`cat $SAVE_ROOM_ID`
+            else
+                usage
+                exit 1
+            fi
+        fi
+        if [ "$2" = "" -o "$ROOM_ID" = "" ];then
             usage
             exit 1
         fi
         API_METH="POST"
-        API_PATH="rooms/$2/messages"
-        API_POST_MES=`echo $3 | ruby -r uri -ne 'print URI.escape $_'`
+        API_PATH="rooms/$ROOM_ID/messages"
+        API_POST_MES=`echo $2 | ruby -r uri -ne 'print URI.escape $_'`
         ;;
     \?) usage
         exit 1
@@ -88,6 +101,10 @@ if [ $? -eq 0 ];then
     echo $CURL_RES | jq "."
 else
     echo $CURL_RES
+fi
+
+if [ "$ROOM_ID" != "" ];then
+    echo "$ROOM_ID" > $SAVE_ROOM_ID
 fi
 
 exit 0
