@@ -7,7 +7,7 @@ SAVE_API_CODE=$HOME/.chatwork
 SAVE_ROOM_ID=$HOME/.chatwork.room
 
 usage() {
-    echo "Usage: $0 [ -h ] [ -i ] [ -s ] [ -c api token ] [-r room_id] {get-rooms|get-me|get-my-status|post-mes} params..."
+    echo "Usage: $0 [ -h ] [ -i ] [ -s ] [ -c api token ] [-r room_id] {get-rooms|get-room|get-me|get-my-status|post-mes} params..."
     echo "   -s : silent mode"
     echo "   -i : interactive mode ( when \"post-mes\" )"
     echo "   params (when \"post-mes\") : message"
@@ -72,7 +72,7 @@ case $CW_API_CMD in
         API_METH="GET"
         API_PATH="my/status"
         ;;
-    post-mes)
+    "post-mes"|"get-room")
         if [ "$ROOM_ID" = "" ];then
             if [ -s $SAVE_ROOM_ID ];then
                 ROOM_ID=`cat $SAVE_ROOM_ID`
@@ -85,8 +85,15 @@ case $CW_API_CMD in
             usage
             exit 1
         fi
-        API_METH="POST"
-        API_PATH="rooms/$ROOM_ID/messages"
+
+        if [ "$CW_API_CMD" = "get-room" ];then
+            API_METH="GET"
+            API_PATH="rooms/$ROOM_ID"
+        elif [ "$CW_API_CMD" = "post-mes" ];then
+            API_METH="POST"
+            API_PATH="rooms/$ROOM_ID/messages"
+        fi
+
         ;;
     \?) usage
         exit 1
