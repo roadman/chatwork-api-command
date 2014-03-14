@@ -13,4 +13,10 @@ Usage: ./chatwork-cmd [ -h ] [ -i ] [ -s ] [ -c api token ] [-r room_id] {get-ro
    params (when "post-mes") : message
 ```
 
+see also
+-----------
+
+jq (http://stedolan.github.io/jq/)
+
+ruby
 

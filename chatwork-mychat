@@ -1,0 +1,3 @@
+#!/bin/sh
+
+chatwork-cmd get-rooms | jq ".[] | select(.type == \"my\") | .room_id, .name"
