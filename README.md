@@ -1,7 +1,7 @@
 chatwork-api-command
 ====================
 
-chatwork api command script
+chatwork api command line script.
 
 usage
 -----------
